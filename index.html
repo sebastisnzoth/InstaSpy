@@ -3,89 +3,68 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>InstaSpy — perfiles permitidos</title>
+  <title>InstaSpy — búsqueda pública</title>
   <style>
     :root { font-family: Inter, system-ui, sans-serif; color-scheme: dark; }
     body { margin:0; background:#0b0b0f; color:#f5f5f7; }
     main { max-width:900px; margin:auto; padding:48px 20px; }
     .card { background:#15151c; border:1px solid #2a2a35; border-radius:18px; padding:22px; margin:18px 0; }
     h1 { margin:0 0 8px; font-size:34px; }
+    h2 { margin-top:0; }
     p { color:#b9b9c5; line-height:1.5; }
-    .buttons { display:flex; gap:12px; flex-wrap:wrap; margin:22px 0; }
-    button { border:0; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer; }
-    button.primary { background:#fff; color:#111; }
-    button.secondary { background:#292936; color:#fff; }
+    .account { display:flex; justify-content:space-between; gap:18px; align-items:center; flex-wrap:wrap; }
+    .buttons { display:flex; gap:10px; flex-wrap:wrap; }
+    a.btn { display:inline-block; text-decoration:none; border-radius:12px; padding:11px 14px; font-weight:700; background:#292936; color:#fff; }
+    a.btn.primary { background:#fff; color:#111; }
     .muted { color:#8f8f9e; font-size:14px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
-    .stat { background:#101016; border-radius:14px; padding:14px; }
-    .stat b { display:block; font-size:22px; margin-top:4px; }
-    .post { padding:14px 0; border-top:1px solid #2a2a35; }
-    a { color:#b9d7ff; }
-    img.avatar { width:92px; height:92px; border-radius:50%; object-fit:cover; }
-    .profile-head { display:flex; gap:18px; align-items:center; }
-    #status { min-height:24px; }
+    .tag { display:inline-block; padding:5px 9px; border:1px solid #343442; border-radius:999px; color:#aaaaba; font-size:13px; }
   </style>
 </head>
 <body>
 <main>
   <h1>InstaSpy</h1>
-  <p>Consulta información pública/visible de las dos cuentas habilitadas.</p>
+  <p>Buscador público para encontrar perfiles, publicaciones, menciones e imágenes que estén indexadas en la web. No usa login, cookies ni sesión de Instagram.</p>
 
-  <div class="buttons">
-    <button class="primary" onclick="loadProfile('pao.arandaok')">@pao.arandaok</button>
-    <button class="secondary" onclick="loadProfile('costapalomashowroom')">@costapalomashowroom</button>
+  <div id="accounts"></div>
+
+  <div class="card">
+    <h2>Cómo funciona</h2>
+    <p>“Buscar hoy” agrega la fecha actual y limita la consulta al último día cuando el buscador lo permite. “Imágenes” busca resultados visuales públicos. “Instagram” abre el perfil directamente.</p>
+    <p class="muted">No muestra Stories privadas, cuentas cerradas ni contenido que Instagram o los buscadores no hayan hecho público o indexado.</p>
   </div>
-
-  <div id="status" class="muted"></div>
-  <section id="result"></section>
-
-  <p class="muted">La app no intenta acceder a cuentas privadas ni saltar restricciones de Instagram. Instagram puede limitar consultas automatizadas.</p>
 </main>
 <script>
-const esc = (s='') => String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const accounts = ['pao.arandaok', 'costapalomashowroom'];
+const today = new Intl.DateTimeFormat('es-AR', {year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+const q = s => encodeURIComponent(s);
 
-async function loadProfile(username) {
-  const status = document.getElementById('status');
-  const result = document.getElementById('result');
-  status.textContent = `Consultando @${username}...`;
-  result.innerHTML = '';
-  try {
-    const res = await fetch(`/api/profile?username=${encodeURIComponent(username)}`, {cache:'no-store'});
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'No se pudo consultar');
-    const d = json.data;
-    status.textContent = '';
-    result.innerHTML = `
-      <div class="card">
-        <div class="profile-head">
-          <img class="avatar" src="${esc(d.profile_pic_url)}" alt="avatar">
-          <div>
-            <h2>@${esc(d.username)}</h2>
-            <div>${esc(d.full_name || '')}</div>
-            <div class="muted">${d.is_private ? 'Cuenta privada' : 'Cuenta pública'}${d.is_verified ? ' · Verificada' : ''}</div>
-          </div>
+function card(username) {
+  const exact = `\"${username}\"`;
+  const web = `https://www.google.com/search?q=${q(exact + ' Instagram')}`;
+  const todaySearch = `https://www.google.com/search?q=${q(exact + ' Instagram ' + today)}&tbs=qdr:d`;
+  const images = `https://www.google.com/search?tbm=isch&q=${q(exact + ' Instagram')}`;
+  const bing = `https://www.bing.com/search?q=${q(exact + ' Instagram')}`;
+  const instagram = `https://www.instagram.com/${username}/`;
+
+  return `
+    <section class="card">
+      <div class="account">
+        <div>
+          <h2>@${username}</h2>
+          <span class="tag">búsqueda pública</span>
         </div>
-        <p>${esc(d.biography || '')}</p>
-        <div class="grid">
-          <div class="stat">Seguidores<b>${Number(d.followers).toLocaleString()}</b></div>
-          <div class="stat">Seguidos<b>${Number(d.followees).toLocaleString()}</b></div>
-          <div class="stat">Publicaciones<b>${Number(d.mediacount).toLocaleString()}</b></div>
+        <div class="buttons">
+          <a class="btn primary" href="${todaySearch}" target="_blank" rel="noopener">Buscar hoy</a>
+          <a class="btn" href="${images}" target="_blank" rel="noopener">Imágenes</a>
+          <a class="btn" href="${web}" target="_blank" rel="noopener">Google</a>
+          <a class="btn" href="${bing}" target="_blank" rel="noopener">Bing</a>
+          <a class="btn" href="${instagram}" target="_blank" rel="noopener">Instagram</a>
         </div>
       </div>
-      <div class="card">
-        <h3>Publicaciones recientes visibles</h3>
-        ${d.posts.length ? d.posts.map(p => `
-          <div class="post">
-            <b>${new Date(p.date).toLocaleString()}</b>
-            <div class="muted">${p.is_video ? 'Video' : 'Imagen/carrusel'} · ${p.likes} likes · ${p.comments} comentarios</div>
-            <p>${esc(p.caption || '')}</p>
-            <a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir publicación</a>
-          </div>`).join('') : '<p class="muted">No se obtuvieron publicaciones visibles. Puede deberse a privacidad o a límites de Instagram.</p>'}
-      </div>`;
-  } catch (err) {
-    status.textContent = `Error: ${err.message}`;
-  }
+    </section>`;
 }
+
+document.getElementById('accounts').innerHTML = accounts.map(card).join('');
 </script>
 </body>
 </html>
